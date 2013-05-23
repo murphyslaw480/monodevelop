@@ -126,18 +126,32 @@ namespace Mono.TextEditor.Vi
 		char macros_lastplayed = '@';
 		// start with the illegal macro character
 		string statusText = "";
-		/// <summary>
 		/// Number of times to perform the next action
 		/// For example 3 is the numeric prefix when "3w" is entered
 		/// <summary>
-		string numericPrefix = "0";
+		string numericPrefix = String.Empty;
+
+		/// <summary>
+		/// Number of times to perform the next action
+		/// <summary>
+		int repeatCount {
+			get {
+				int n;
+				int.TryParse (numericPrefix, out n);
+				return n < 1 ? 1 : n;
+			}
+			set {
+				numericPrefix = value.ToString ();
+			}
+		}
 
 		/// <summary>
 		/// Whether ViEditMode is in a state where it should accept a numeric prefix
 		/// <summary>
 		bool AcceptNumericPrefix {
 			get {
-				return CurState == State.Normal || CurState == State.Delete || CurState == State.Change || CurState == State.Yank;
+				return CurState == State.Normal || CurState == State.Delete || CurState == State.Change 
+					|| CurState == State.Yank;
 			}
 		}
 
@@ -341,7 +355,7 @@ namespace Mono.TextEditor.Vi
 			commandBuffer.Length = 0;
 			Status = status;
 
-      numericPrefix = "0";
+			numericPrefix = "0";
 		}
 
 		protected virtual Action<TextEditorData> GetInsertAction (Gdk.Key key, Gdk.ModifierType modifier)
@@ -356,16 +370,11 @@ namespace Mono.TextEditor.Vi
 		/// <summary>
 		private void RunRepeatableAction (Action<TextEditorData> action)
 		{
-			if (numericPrefix.Length <= 1) {
+			int reps = repeatCount;   //how many times to repeat command
+			for (int i = 0; i < reps; i++) {
 				RunAction (action);
-			} else {
-				int reps;   //how many times to repeat command
-				int.TryParse (numericPrefix, out reps);
-				for (int i = 0; i < reps; i++) {
-					RunAction (action);
-				}
-				numericPrefix = "0";
 			}
+			numericPrefix = "";
 		}
 
 		/// <summary>
@@ -374,22 +383,16 @@ namespace Mono.TextEditor.Vi
 		/// <summary>
 		private void RunRepeatableActionChain (params Action<TextEditorData>[] actions)
 		{
-			if (numericPrefix.Length <= 1) {
-				RunActions (actions);
-			} else {
-				List<Action<TextEditorData>> actionList = new List<Action<TextEditorData>> ();
-				int reps;   //how many times to repeat command
-				int.TryParse (numericPrefix, out reps);
-				for (int i = 0; i < reps; i++) {
-					actionList.Add (actions [0]);
-				}
-				for (int i = 1; i < actions.Length; i++) {
-					actionList.Add (actions [i]);
-				}
-				RunActions (actionList.ToArray ());
-				numericPrefix = "0";
+			List<Action<TextEditorData>> actionList = new List<Action<TextEditorData>> ();
+			int reps = repeatCount;   //how many times to repeat command
+			for (int i = 0; i < reps; i++) {
+				actionList.Add (actions [0]);
 			}
-      
+			for (int i = 1; i < actions.Length; i++) {
+				actionList.Add (actions [i]);
+			}
+			RunActions (actionList.ToArray ());
+			numericPrefix = "";
 		}
 
 		/// <summary>
@@ -398,22 +401,17 @@ namespace Mono.TextEditor.Vi
 		/// The second action indicates the action to be taken on the line
 		/// The third action indicates the action to reset after completing the action on that line
 		/// <summary>
-		private void RunRepeatableLineAction (Action<TextEditorData> startMove, Action<TextEditorData> action, Action<TextEditorData> endMove)
+		private void RepeatAllActions (params Action<TextEditorData>[] actions)
 		{
-			//RunActions (action, ClipboardActions.Cut, CaretMoveActions.LineFirstNonWhitespace, action, ClipboardActions.Cut, CaretMoveActions.LineFirstNonWhitespace);
 			List<Action<TextEditorData>> actionList = new List<Action<TextEditorData>> ();
 
-			int reps;   //how many times to repeat command
-			int.TryParse (numericPrefix, out reps);
-			reps = (reps == 0) ? 1 : reps;
+			int reps = repeatCount;   //how many times to repeat command
 
 			for (int i = 0; i < reps; i++) {
-				actionList.Add (startMove);
-				actionList.Add (action);
-				actionList.Add (endMove);
+				actionList.AddRange (actions);
 			}
 			RunActions (actionList.ToArray ());
-			numericPrefix = "0";
+			numericPrefix = "";
 		}
 
 		protected override void HandleKeypress (Gdk.Key key, uint unicodeKey, Gdk.ModifierType modifier)
@@ -692,8 +690,8 @@ namespace Mono.TextEditor.Vi
 
 				if (motion != Motion.None) {
 					action = ViActionMaps.GetEditObjectCharAction ((char)unicodeKey, motion);
-				} else if (((modifier & (Gdk.ModifierType.ShiftMask | Gdk.ModifierType.ControlMask)) == 0 
-					&& unicodeKey == 'd')) {
+				} else if ((modifier & (Gdk.ModifierType.ShiftMask | Gdk.ModifierType.ControlMask)) == 0 
+					&& unicodeKey == 'd') {
 					action = SelectionActions.LineActionFromMoveAction (CaretMoveActions.LineEnd);
 					lineAction = true;
 				} else {
@@ -705,8 +703,18 @@ namespace Mono.TextEditor.Vi
 				}
 				
 				if (action != null) {
-					if (lineAction) {
-						RunRepeatableLineAction (action, ClipboardActions.Cut, CaretMoveActions.LineFirstNonWhitespace);
+					if (lineAction) {   //dd or dj  -- delete lines moving downward
+						RepeatAllActions (action, ClipboardActions.Cut, CaretMoveActions.LineFirstNonWhitespace);
+					} else if (unicodeKey == 'j') {   //dj -- delete current line and line below
+						repeatCount += 1;
+						action = SelectionActions.LineActionFromMoveAction (CaretMoveActions.LineEnd);
+						RepeatAllActions (action, ClipboardActions.Cut, CaretMoveActions.LineFirstNonWhitespace);
+					} else if (unicodeKey == 'j') {   //dj -- delete current line and line below
+						repeatCount += 1;
+						RepeatAllActions (action, ClipboardActions.Cut, CaretMoveActions.LineFirstNonWhitespace);
+					} else if (unicodeKey == 'k') {   //dk -- delete current line and line above
+						repeatCount += 1;
+						RepeatAllActions (CaretMoveActions.LineFirstNonWhitespace, ClipboardActions.Cut, action);
 					} else {
 						RunRepeatableActionChain (action, ClipboardActions.Cut);
 					}
@@ -773,7 +781,7 @@ namespace Mono.TextEditor.Vi
 					if (lineAction)
 						RunActions (action, ClipboardActions.Cut, ViActions.NewLineAbove);
 					else
-						RunActions (action, ClipboardActions.Cut);
+						RunRepeatableActionChain (action, ClipboardActions.Cut);
 					Status = "-- INSERT --";
 					CurState = State.Insert;
 					Caret.Mode = CaretMode.Insert;
