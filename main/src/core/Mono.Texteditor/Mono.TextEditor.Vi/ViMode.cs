@@ -89,7 +89,8 @@ namespace Mono.TextEditor.Vi
     {
       get {
         return CurState == State.Normal || CurState == State.Delete || CurState == State.Change 
-          || CurState == State.Yank || CurState == State.Indent || CurState == State.Unindent;
+          || CurState == State.Yank || CurState == State.Indent || CurState == State.Unindent
+          || CurState == State.G;
       }
     }
 		/// The macro currently being implemented. Will be set to null and checked as a flag when required.
@@ -991,7 +992,8 @@ namespace Mono.TextEditor.Vi
 				if (((modifier & (Gdk.ModifierType.ControlMask)) == 0)) {
 					switch ((char)unicodeKey) {
 					case 'g':
-						Caret.Offset = 0;
+						Data.Caret.Line = repeatCount;
+            RunAction (CaretMoveActions.LineFirstNonWhitespace);
 						Reset ("");
 						return;
 					}
