@@ -60,6 +60,9 @@ namespace Mono.TextEditor.Vi
 		char macros_lastplayed = '@'; // start with the illegal macro character
 		string statusText = "";
 
+    //store inserted text for repeated insertion if entering insert mode with repeatCount > 1
+    StringBuilder insertBuffer = new StringBuilder();
+
     /// <summary>
     /// Number of times to perform the next action
     /// For example 3 is the numeric prefix when "3w" is entered
@@ -366,6 +369,16 @@ namespace Mono.TextEditor.Vi
 					toAdd.UnicodeKey = unicodeKey;
 					currentMacro.KeysPressed.Enqueue(toAdd);
 				}
+
+        if (CurState == State.Insert)
+        {
+          //handle repeated insert
+          for (int i = 1 ; i < repeatCount ; i++)
+          {
+            Data.InsertAtCaret (insertBuffer.ToString());
+          }
+          insertBuffer.Clear ();
+        }
 				Reset(string.Empty);
 				return;
 			} else if (((key == Gdk.Key.c || key == Gdk.Key.bracketleft) && (modifier & Gdk.ModifierType.ControlMask) != 0)) {
@@ -461,13 +474,31 @@ namespace Mono.TextEditor.Vi
 						CurState = State.Yank;
 						HandleKeypress (Gdk.Key.y, (int)'y', Gdk.ModifierType.None);
 						return;
-						
+
 					case 'O':
 						RunAction (ViActions.NewLineAbove);
+            if (repeatCount > 1)
+            { //save inserted newline for multipe insertion
+              insertBuffer.Append('\n');
+              for (int i = 0 ; i < Caret.Column - 1 ; i++)
+              { //insert spaces to align line inserts
+                insertBuffer.Append(' ');
+              }
+            }
 						goto case 'i';
 						
 					case 'o':
 						RunAction (ViActions.NewLineBelow);
+            insertBuffer.Append('\n');
+            if (repeatCount > 1)
+            { //save inserted newline for multipe insertion
+              insertBuffer.Append('\n');
+              for (int i = 0 ; i < Caret.Column - 1 ; i++)
+              { //insert spaces to align line inserts
+                insertBuffer.Append(' ');
+              }
+            }
+
 						goto case 'i';
 						
 					case 'r':
@@ -790,8 +821,42 @@ namespace Mono.TextEditor.Vi
 				
 				if (action != null)
 					RunAction (action);
+        
 				else if (unicodeKey != 0)
+        {
 					InsertCharacter (unicodeKey);
+        }
+
+        if (repeatCount > 1)
+        { //save inserted text for multiple insertion
+          insertBuffer.Append ((char)unicodeKey);
+        }
+        
+        /*
+        //handle repetition of special characters
+        if (repeatCount > 1)
+        {
+          switch (key) 
+          {
+            case Gdk.Key.Tab:
+              insertBuffer.Append ((char)unicodeKey);
+
+            case Gdk.Key.Return:
+            case Gdk.Key.KP_Enter:
+              return MiscActions.InsertNewLine;
+
+            case Gdk.Key.BackSpace:
+              return DeleteActions.Backspace;
+
+            case Gdk.Key.Delete:
+            case Gdk.Key.KP_Delete:
+              return DeleteActions.Delete;
+
+            case Gdk.Key.Insert:
+              return MiscActions.SwitchCaretMode;
+          }
+        }
+          */
 				
 				return;
 
