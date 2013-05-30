@@ -303,7 +303,7 @@ namespace Mono.TextEditor.Vi
 		}
 
     /// Run an action multiple times if it was preceded by a numeric key
-    /// Resets numeric prefixs
+    /// Resets numeric prefix
     /// <summary>
     private void RunRepeatableAction (Action<TextEditorData> action)
     {
@@ -318,6 +318,7 @@ namespace Mono.TextEditor.Vi
     /// <summary>
     /// Run the first action multiple times if it was preceded by a numeric key
     /// Run the following actions once each
+    /// Resets numeric prefix
     /// <summary>
     private void RunRepeatableActionChain (params Action<TextEditorData>[] actions)
     {
@@ -336,10 +337,8 @@ namespace Mono.TextEditor.Vi
     }
 
     /// <summary>
-    /// Repeat entire set of actions based on preceding numeric key
-    /// The first action indicates the movement that initiates the line action
-    /// The second action indicates the action to be taken on the line
-    /// The third action indicates the action to reset after completing the action on that line
+    /// Produce a list containing all actions repeated based on repeatCount
+    /// Resets numeric prefix
     /// <summary>
     private List<Action<TextEditorData>> GenerateRepeatedActionList(
         params Action<TextEditorData>[] actions)
@@ -699,7 +698,7 @@ namespace Mono.TextEditor.Vi
                 CaretMoveActions.LineFirstNonWhitespace, ClipboardActions.Cut, action);
           }
 					else
-          {
+          { //repeat movement action to select and end with a cut action
 						actions = GenerateRepeatedActionList (action);
             actions.Add (ClipboardActions.Cut);
           }
@@ -737,22 +736,22 @@ namespace Mono.TextEditor.Vi
 				if (action != null) {
           if (lineAction)
           {
-            RunAction (CaretMoveActions.LineStart);
+            RunAction (CaretMoveActions.LineStart); //begin at start of line
             SelectionActions.StartSelection(Data);
             for (int i = 0 ; i < repeatCount ; i++)
             {
-              RunAction(action);
+              RunAction(action);  //select multiple lines
             }
             SelectionActions.EndSelection(Data);
             numericPrefix = "";
           }
           else
           {
-            RunRepeatableAction (action);
+            RunRepeatableAction (action); //make multiple selection movements
           }
           if (Data.IsSomethingSelected && !lineAction)
             offset = Data.SelectionRange.Offset;
-					RunAction (ClipboardActions.Copy);
+					RunAction (ClipboardActions.Copy);  //copy selected text
 					Reset (string.Empty);
 				} else {
 					Reset ("Unrecognised motion");
@@ -805,7 +804,7 @@ namespace Mono.TextEditor.Vi
             actions.Add (ViActions.NewLineBelow);
           }
 					else
-          {
+          { //run multiple actions to select, then cut
 						actions = GenerateRepeatedActionList (action);
             actions.Add (ClipboardActions.Cut);
           }
@@ -976,7 +975,7 @@ namespace Mono.TextEditor.Vi
 					int roffset = Data.SelectionRange.Offset;
           actions.Add (SelectionActions.FromMoveAction(CaretMoveActions.LineEnd));
           for (int i = 1 ; i < repeatCount ; i++)
-          {
+          { //select multiple lines to indent
             actions.Add (SelectionActions.FromMoveAction (ViActions.Down));
           }
           actions.Add (MiscActions.IndentSelection);
