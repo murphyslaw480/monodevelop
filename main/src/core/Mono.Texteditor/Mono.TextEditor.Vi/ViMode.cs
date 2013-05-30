@@ -37,6 +37,7 @@ namespace Mono.TextEditor.Vi
 	public class ViEditMode : EditMode
 	{
 		bool searchBackward;
+    bool saveInsertText;  //for multiple insertion
 		static string lastPattern;
 		static string lastReplacement;
 		State curState;
@@ -373,9 +374,12 @@ namespace Mono.TextEditor.Vi
         if (CurState == State.Insert)
         {
           //handle repeated insert
-          for (int i = 1 ; i < repeatCount ; i++)
+          if (saveInsertText)
           {
-            Data.InsertAtCaret (insertBuffer.ToString());
+            for (int i = 1 ; i < repeatCount ; i++)
+            {
+              Data.InsertAtCaret (insertBuffer.ToString());
+            }
           }
           insertBuffer.Clear ();
         }
@@ -440,6 +444,7 @@ namespace Mono.TextEditor.Vi
 						Caret.Mode = CaretMode.Insert;
 						Status = "-- INSERT --";
 						CurState = State.Insert;
+            saveInsertText = (repeatCount > 1);
 						return;
 						
 					case 'R':
@@ -489,7 +494,6 @@ namespace Mono.TextEditor.Vi
 						
 					case 'o':
 						RunAction (ViActions.NewLineBelow);
-            insertBuffer.Append('\n');
             if (repeatCount > 1)
             { //save inserted newline for multipe insertion
               insertBuffer.Append('\n');
@@ -827,36 +831,39 @@ namespace Mono.TextEditor.Vi
 					InsertCharacter (unicodeKey);
         }
 
-        if (repeatCount > 1)
-        { //save inserted text for multiple insertion
-          insertBuffer.Append ((char)unicodeKey);
-        }
-        
-        /*
         //handle repetition of special characters
-        if (repeatCount > 1)
+        if (saveInsertText)
         {
           switch (key) 
           {
             case Gdk.Key.Tab:
-              insertBuffer.Append ((char)unicodeKey);
+              insertBuffer.Append ('\t');
+              break;
 
             case Gdk.Key.Return:
             case Gdk.Key.KP_Enter:
-              return MiscActions.InsertNewLine;
+              insertBuffer.Append ('\n');
+              break;
 
             case Gdk.Key.BackSpace:
-              return DeleteActions.Backspace;
+              insertBuffer.Remove (insertBuffer.Length-1, 1);
+              break;
 
             case Gdk.Key.Delete:
             case Gdk.Key.KP_Delete:
-              return DeleteActions.Delete;
+            case Gdk.Key.Left:
+            case Gdk.Key.Right:
+            case Gdk.Key.Up:
+            case Gdk.Key.Down:
+              insertBuffer.Clear();
+              saveInsertText = false; //just cancel repeated insert
+              break;
 
-            case Gdk.Key.Insert:
-              return MiscActions.SwitchCaretMode;
+            default:
+              insertBuffer.Append ((char)unicodeKey);
+              break;
           }
         }
-          */
 				
 				return;
 
