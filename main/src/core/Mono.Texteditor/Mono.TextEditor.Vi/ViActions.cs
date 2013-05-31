@@ -204,7 +204,33 @@ namespace Mono.TextEditor.Vi
 		{
 			data.Caret.Offset = data.FindCurrentWordEnd (data.Caret.Offset);
 		}
-		
+
+		public static void NextSubwordEnd (TextEditorData data)
+		{
+      if (data.Caret.Offset == data.FindCurrentWordEnd (data.Caret.Offset)) 
+      {   //already at word end, find next word then goto end
+			    data.Caret.Offset = data.FindNextSubwordOffset (data.Caret.Offset);
+          data.Caret.Offset = data.FindCurrentWordEnd (data.Caret.Offset);  
+      }
+      else
+      {
+          data.Caret.Offset = data.FindCurrentWordEnd (data.Caret.Offset);    //goto current word end
+      }
+		}
+
+		public static void NextWordEnd (TextEditorData data)
+		{
+      if (data.Caret.Offset == data.FindCurrentWordEnd (data.Caret.Offset)) 
+      {   //already at word end, find next word then goto end
+			    data.Caret.Offset = data.FindNextWordOffset (data.Caret.Offset);
+          data.Caret.Offset = data.FindCurrentWordEnd (data.Caret.Offset);  
+      }
+      else
+      {
+          data.Caret.Offset = data.FindCurrentWordEnd (data.Caret.Offset);    //goto current word end
+      }
+		}
+
 		public static void WordStart (TextEditorData data)
 		{
 			data.Caret.Offset = data.FindCurrentWordStart (data.Caret.Offset);

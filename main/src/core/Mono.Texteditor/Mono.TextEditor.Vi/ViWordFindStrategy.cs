@@ -114,6 +114,26 @@ namespace Mono.TextEditor.Vi
 			     
 			return (0 == offset)? offset: offset+1;
 		}
+
+		/// <summary>
+		/// Move to end of current word
+		/// </summary>
+		public override int FindCurrentWordEnd (TextDocument doc, int offset)
+		{
+			int myoffset = offset;
+			if (0 > myoffset || doc.TextLength-1 <= myoffset){ return myoffset; }
+			
+			char c = doc.GetCharAt (myoffset);
+			     
+			CharacterClass initialClass = GetCharacterClass (c);
+			
+			while (GetCharacterClass (c) == initialClass && 0 <= myoffset && doc.TextLength-1 > myoffset) {
+				c = doc.GetCharAt (++myoffset);
+			}
+
+      return myoffset - 1;
+			//return (myoffset == offset)? myoffset+1: myoffset;
+		}
 		
 		#endregion
 		

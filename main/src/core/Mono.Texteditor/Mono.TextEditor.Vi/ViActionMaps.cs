@@ -94,6 +94,10 @@ namespace Mono.TextEditor.Vi
 				return CaretMoveActions.NextSubword;
 			case 'W':
 				return CaretMoveActions.NextWord;
+			case 'e':
+				return ViActions.NextSubwordEnd;
+			case 'E':
+				return ViActions.NextWordEnd;
 			case 'k':
 				return ViActions.Up;
 			case 'j':
