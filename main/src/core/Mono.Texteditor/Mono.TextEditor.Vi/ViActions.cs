@@ -223,6 +223,8 @@ namespace Mono.TextEditor.Vi
       if (data.Caret.Offset == data.FindCurrentWordEnd (data.Caret.Offset)) 
       {   //already at word end, find next word then goto end
 			    data.Caret.Offset = data.FindNextWordOffset (data.Caret.Offset);
+			    data.Caret.Offset = data.FindNextWordOffset (data.Caret.Offset);
+			    data.Caret.Offset = data.FindPrevSubwordOffset (data.Caret.Offset);
           data.Caret.Offset = data.FindCurrentWordEnd (data.Caret.Offset);  
       }
       else
