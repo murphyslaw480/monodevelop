@@ -38,6 +38,7 @@ namespace Mono.TextEditor.Vi
 	{
 		bool searchBackward;
     bool saveInsertText;  //for multiple insertion
+    bool innerOuterMode;  //gathering info for an inner/outer motion request
 		static string lastPattern;
 		static string lastReplacement;
 		State curState;
@@ -294,6 +295,7 @@ namespace Mono.TextEditor.Vi
 			Status = status;
 
       numericPrefix = "";
+      innerOuterMode = false;
 		}
 		
 		protected virtual Action<TextEditorData> GetInsertAction (Gdk.Key key, Gdk.ModifierType modifier)
@@ -658,16 +660,32 @@ namespace Mono.TextEditor.Vi
 				return;
 				
 			case State.Delete:
-				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) return;
-
-        if (motion != Motion.None) {
-					action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
-				}
+				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+        {
+          innerOuterMode = true;
+          return;
+        }
+        else if (innerOuterMode) //handle inner/outer motion
+        {
+          if (TextDocument.IsBracket((char)unicodeKey))
+          {
+            action = (motion == Motion.Outer) ? 
+              ViActions.OuterSymbol ((char)unicodeKey) : ViActions.InnerSymbol ((char)unicodeKey);
+          }
+          else  //not a bracket
+          {
+            Reset("Fail");
+            return;
+          }
+        }
+        else if (motion != Motion.None) {
+          action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
+        }
         else if ((modifier & (Gdk.ModifierType.ShiftMask | Gdk.ModifierType.ControlMask)) == 0 
-				     && unicodeKey == 'd' )
-				{
-					action = SelectionActions.LineActionFromMoveAction (CaretMoveActions.LineEnd);
-					lineAction = true;
+            && unicodeKey == 'd' )
+        {
+          action = SelectionActions.LineActionFromMoveAction (CaretMoveActions.LineEnd);
+          lineAction = true;
 				} 
         else {
 					action = ViActionMaps.GetNavCharAction ((char)unicodeKey);
