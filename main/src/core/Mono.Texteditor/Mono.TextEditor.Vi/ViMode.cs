@@ -730,10 +730,26 @@ namespace Mono.TextEditor.Vi
 				return;
 
 			case State.Yank:
-				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) return;
 				int offset = Caret.Offset;
-
-				if (motion != Motion.None) {
+				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+        {
+          innerOuterMode = true;
+          return;
+        }
+        else if (innerOuterMode) //handle inner/outer motion
+        {
+          if (TextDocument.IsBracket((char)unicodeKey))
+          {
+            action = (motion == Motion.Outer) ? 
+              ViActions.OuterSymbol ((char)unicodeKey) : ViActions.InnerSymbol ((char)unicodeKey);
+          }
+          else  //not a bracket
+          {
+            Reset("Fail");
+            return;
+          }
+        }
+        else if (motion != Motion.None) {
 					action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
 				}
 				else if (((modifier & (Gdk.ModifierType.ShiftMask | Gdk.ModifierType.ControlMask)) == 0
@@ -779,9 +795,25 @@ namespace Mono.TextEditor.Vi
 				return;
 				
 			case State.Change:
-				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) return;
-
-				if (motion != Motion.None) {
+				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+        {
+          innerOuterMode = true;
+          return;
+        }
+        else if (innerOuterMode) //handle inner/outer motion
+        {
+          if (TextDocument.IsBracket((char)unicodeKey))
+          {
+            action = (motion == Motion.Outer) ? 
+              ViActions.OuterSymbol ((char)unicodeKey) : ViActions.InnerSymbol ((char)unicodeKey);
+          }
+          else  //not a bracket
+          {
+            Reset("Fail");
+            return;
+          }
+        }
+        else if (motion != Motion.None) {
 					action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
 				}
 				//copied from delete action
