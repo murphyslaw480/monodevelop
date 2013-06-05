@@ -98,6 +98,17 @@ namespace Mono.TextEditor.Vi
           || CurState == State.G;
       }
     }
+    /// <summary>
+    /// Whether ViEditMode is in a state where it should accept an inner/outer motion
+    /// Interpret a as outer, i as inner (as in di{)
+    /// <summary>
+    bool AcceptInnerOuterMotion
+    {
+      get {
+        return CurState == State.Delete || CurState == State.Change || CurState == State.Yank;
+          
+      }
+    }
 		/// The macro currently being implemented. Will be set to null and checked as a flag when required.
 		/// </summary>
 		ViMacro currentMacro;
@@ -304,6 +315,20 @@ namespace Mono.TextEditor.Vi
 				ViActionMaps.GetDirectionKeyAction (key, modifier);
 		}
 
+    private Action<TextEditorData> GetBracketAction(char bracket)
+    {
+      if (TextDocument.IsBracket(bracket))
+      {
+        return (motion == Motion.Outer) ? 
+          ViActions.OuterSymbol (bracket) : ViActions.InnerSymbol (bracket);
+      }
+      else  //not a bracket
+      {
+        Reset("Unrecognised Motion");
+        return null;
+      }
+    }
+
     /// Run an action multiple times if it was preceded by a numeric key
     /// Resets numeric prefix
     /// <summary>
@@ -409,6 +434,13 @@ namespace Mono.TextEditor.Vi
       if (AcceptNumericPrefix && '0' <= (char)unicodeKey && (char)unicodeKey <= '9')
       {
         numericPrefix += (char)unicodeKey;
+        return;
+      }
+
+      //handle inner/outer motion (i or a in delete/change/yank)
+      if (AcceptInnerOuterMotion && IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+      {
+        innerOuterMode = true;
         return;
       }
 			
@@ -660,23 +692,9 @@ namespace Mono.TextEditor.Vi
 				return;
 				
 			case State.Delete:
-				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+        if (innerOuterMode) //handle inner/outer motion
         {
-          innerOuterMode = true;
-          return;
-        }
-        else if (innerOuterMode) //handle inner/outer motion
-        {
-          if (TextDocument.IsBracket((char)unicodeKey))
-          {
-            action = (motion == Motion.Outer) ? 
-              ViActions.OuterSymbol ((char)unicodeKey) : ViActions.InnerSymbol ((char)unicodeKey);
-          }
-          else  //not a bracket
-          {
-            Reset("Fail");
-            return;
-          }
+          action = GetBracketAction ((char) unicodeKey);
         }
         else if (motion != Motion.None) {
           action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
@@ -731,23 +749,9 @@ namespace Mono.TextEditor.Vi
 
 			case State.Yank:
 				int offset = Caret.Offset;
-				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+        if (innerOuterMode) //handle inner/outer motion
         {
-          innerOuterMode = true;
-          return;
-        }
-        else if (innerOuterMode) //handle inner/outer motion
-        {
-          if (TextDocument.IsBracket((char)unicodeKey))
-          {
-            action = (motion == Motion.Outer) ? 
-              ViActions.OuterSymbol ((char)unicodeKey) : ViActions.InnerSymbol ((char)unicodeKey);
-          }
-          else  //not a bracket
-          {
-            Reset("Fail");
-            return;
-          }
+          action = GetBracketAction ((char) unicodeKey);
         }
         else if (motion != Motion.None) {
 					action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
@@ -795,23 +799,9 @@ namespace Mono.TextEditor.Vi
 				return;
 				
 			case State.Change:
-				if (IsInnerOrOuterMotionKey (unicodeKey, ref motion)) 
+        if (innerOuterMode) //handle inner/outer motion
         {
-          innerOuterMode = true;
-          return;
-        }
-        else if (innerOuterMode) //handle inner/outer motion
-        {
-          if (TextDocument.IsBracket((char)unicodeKey))
-          {
-            action = (motion == Motion.Outer) ? 
-              ViActions.OuterSymbol ((char)unicodeKey) : ViActions.InnerSymbol ((char)unicodeKey);
-          }
-          else  //not a bracket
-          {
-            Reset("Fail");
-            return;
-          }
+          action = GetBracketAction ((char)unicodeKey);
         }
         else if (motion != Motion.None) {
 					action = ViActionMaps.GetEditObjectCharAction((char) unicodeKey, motion);
