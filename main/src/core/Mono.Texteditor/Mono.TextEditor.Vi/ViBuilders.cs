@@ -46,7 +46,8 @@ namespace Mono.TextEditor.Vi
 				if (!ed.Marks.TryGetValue (c, out mark))
 					ed.Marks [c] = mark = new ViMark (c);
 				mark.SaveMark (ed.Data);
-			});
+			}
+			);
 			return true;
 		}
 		
@@ -58,25 +59,25 @@ namespace Mono.TextEditor.Vi
 				var l = ctx.LastKey;
 				bool noModifiers = l.Modifiers == ModifierType.None;
 				
-				ctx.Message = ctx.Mode == ViEditorMode.Replace? "-- REPLACE --" : "-- INSERT --";
+				ctx.Message = ctx.Mode == ViEditorMode.Replace ? "-- REPLACE --" : "-- INSERT --";
 				
 				if ((noModifiers && l.Key == Key.Escape) || (l.Char == 'c' && (l.Modifiers & ModifierType.ControlMask) != 0)) {
 					ctx.RunAction ((ViEditor ed) => {
-						if (inUndoTx)
-						{
+						if (inUndoTx) {
 							ed.Document.EndAtomicUndo ();
 							inUndoTx = false;
 						}
 						ed.LastInsertedText = lastInserted.ToString ();
 						ed.SetMode (ViEditorMode.Normal);
-					});
+					}
+					);
 					return true;
 				}
 				
 				//keypad motions etc
 				if (preInsertActions (ctx)) {
 					if (inUndoTx)
-						ctx.RunAction ( (ed) => ed.Document.EndAtomicUndo () );
+						ctx.RunAction ((ed) => ed.Document.EndAtomicUndo ());
 					inUndoTx = false;
 					ctx.SuppressCompleted ();
 					lastInserted.Length = 0;
@@ -85,7 +86,7 @@ namespace Mono.TextEditor.Vi
 				
 				if (l.Char != '\0' && noModifiers) {
 					if (!inUndoTx)
-						ctx.RunAction ( (ed) => ed.Document.BeginAtomicUndo () );
+						ctx.RunAction ((ed) => ed.Document.BeginAtomicUndo ());
 					inUndoTx = true;
 					ctx.SuppressCompleted ();
 					lastInserted.Append (l.Char);
@@ -111,7 +112,8 @@ namespace Mono.TextEditor.Vi
 					mark.LoadMark (ed.Data);
 				else
 					ed.Reset ("Unknown Mark");
-			});
+			}
+			);
 			return true;
 		}
 		
@@ -150,6 +152,11 @@ namespace Mono.TextEditor.Vi
 			ctx.Builder = (ViBuilderContext x) => {
 				int c = (int)x.LastKey.Char;
 				if (c >= (int)'0' && c <= (int)'9') {
+					if (factor == 1 && c == (int)'0') {
+						ctx.Multiplier *= multiplier;
+						ctx.Builder = nextBuilder;
+						return ctx.Builder (ctx);
+					}
 					int d = c - (int)'0';
 					multiplier = multiplier * factor + d;
 					factor *= 10;
