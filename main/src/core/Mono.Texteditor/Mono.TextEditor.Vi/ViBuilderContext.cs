@@ -53,7 +53,7 @@ namespace Mono.TextEditor.Vi
 		
 		public void ProcessKey (Key key, char ch, ModifierType modifiers)
 		{
-			var k = ch == '\0'? new ViKey (modifiers, key) : new ViKey (modifiers, ch);
+			var k = ch == '\0' ? new ViKey (modifiers, key) : new ViKey (modifiers, ch);
 			Keys.Add (k);
 			if (!Builder (this)) {
 				SetError ("Unknown command");
@@ -163,7 +163,7 @@ namespace Mono.TextEditor.Vi
 		}
 		
 		public ViKey LastKey {
-			get { return Keys[Keys.Count - 1]; }
+			get { return Keys [Keys.Count - 1]; }
 		}
 		
 		public static ViBuilderContext Create (ViEditor editor)
@@ -178,7 +178,8 @@ namespace Mono.TextEditor.Vi
 			normalBuilder = 
 				ViBuilders.RegisterBuilder (
 					ViBuilders.MultiplierBuilder (
-						ViBuilders.First (normalActions.Builder, motions.Builder, nonCharMotions.Builder)));
+						ViBuilders.First (normalActions.Builder, motions.Builder, nonCharMotions.Builder))
+			);
 			insertActions = ViBuilders.First (nonCharMotions.Builder, insertEditActions.Builder);
 		}
 		
@@ -197,7 +198,7 @@ namespace Mono.TextEditor.Vi
 				{ 'o', FoldActions.OpenFold },
 			}},
 			{ 'g', new ViCommandMap () {
-				{ 'g', CaretMoveActions.ToDocumentStart },
+				{ 'g', GotoLine, true },
 			}},
 			{ 'r', ViBuilders.ReplaceChar },
 			{ '~', ViActions.ToggleCase },
@@ -309,6 +310,13 @@ namespace Mono.TextEditor.Vi
 			// FIXME: this doesn't work correctly on the first line
 			ctx.RunAction ((ViEditor e) => ViActions.Up (e.Data));
 			return Open (ctx);
+		}
+
+		static bool GotoLine (ViBuilderContext ctx)
+		{
+			ctx.RunAction ((ViEditor e) => ViEditorActions.CaretToLineNumber (ctx.Multiplier, e));
+			ctx.RunAction ((ViEditor e) => CaretMoveActions.LineFirstNonWhitespace (e.Data));
+			return true;
 		}
 	}
 }

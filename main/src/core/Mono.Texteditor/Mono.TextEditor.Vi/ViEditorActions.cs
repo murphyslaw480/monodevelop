@@ -33,7 +33,7 @@ namespace Mono.TextEditor.Vi
 	{
 		public static void CaretToScreenCenter (ViEditor ed)
 		{
-			var line = ed.Editor.PointToLocation (0, ed.Editor.Allocation.Height/2).Line;
+			var line = ed.Editor.PointToLocation (0, ed.Editor.Allocation.Height / 2).Line;
 			if (line < 0)
 				line = ed.Data.Document.LineCount;
 			ed.Data.Caret.Line = line;
@@ -50,6 +50,11 @@ namespace Mono.TextEditor.Vi
 		public static void CaretToScreenTop (ViEditor ed)
 		{
 			ed.Data.Caret.Line = System.Math.Max (0, ed.Editor.PointToLocation (0, ed.Editor.LineHeight - 1).Line);
+		}
+
+		public static void CaretToLineNumber (int lineNumber, ViEditor ed)
+		{
+			ed.Data.Caret.Line = System.Math.Max (1, lineNumber);
 		}
 	}
 }
