@@ -55,7 +55,6 @@ namespace Mono.TextEditor.Vi
 		Motion motion;
 		const string substMatch = @"^:s(?<sep>.)(?<pattern>.+?)\k<sep>(?<replacement>.*?)(\k<sep>(?<trailer>i?))?$";
 		StringBuilder commandBuffer = new StringBuilder ();
-
 		Dictionary<char,ViMark> marks = new Dictionary<char, ViMark> ();
 		Dictionary<char,ViMacro> macros = new Dictionary<char, ViMacro> ();
 		char macros_lastplayed = '@';
@@ -384,8 +383,11 @@ namespace Mono.TextEditor.Vi
 
 			//handle numeric keypress
 			if (AcceptNumericPrefix && '0' <= (char)unicodeKey && (char)unicodeKey <= '9') {
-				numericPrefix += (char)unicodeKey;
-				return;
+				if ((char)unicodeKey != '0' || !String.IsNullOrEmpty (numericPrefix)) {
+					numericPrefix += (char)unicodeKey;
+					return;
+				}
+
 			}
 			
 			switch (CurState) {
